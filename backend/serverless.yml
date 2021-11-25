@@ -25,6 +25,21 @@ provider:
     lambda: true
     apiGateway: true
 
+custom:
+  documentation:
+    api:
+      info:
+        version: v1.0.1
+        title: Serverless App
+        description: Serverless Api for making todo lists
+    models:
+      - name: CreateTodo
+        contentType: application/json
+        schema: ${file(models/create-todo-model.json)}
+      - name: UpdateTodo
+        contentType: application/json
+        schema: ${file(models/update-todo-model.json)}
+
 functions:
   Auth:
     handler: src/lambda/auth/auth0Authorizer.handler
@@ -65,6 +80,12 @@ functions:
           path: todos
           cors: true
           auth: Auth
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Create a new todo item
+            description: Create a new todo item
+            requestModels:
+              'application/json': CreateTodo
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -93,6 +114,12 @@ functions:
           path: todos/{todoId}
           cors: true
           auth: Auth
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Update a todo item
+            description: Update a todo item
+            requestModels:
+              'application/json': UpdateTodo
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -178,6 +205,15 @@ functions:
 
 resources:
   Resources:
+    # Request Body Validator
+    RequestBodyValidator:
+      Type: AWS::ApiGateway::RequestValidator
+      Properties:
+        Name: 'request-body-validator'
+        RestApiID:
+          Ref: ApiGatewayRestApi
+        ValidateRequestBody: true
+        ValidateRequestParameters: false
     # API Gateway
     GatewayResponseDefault4XX:
       Type: AWS::ApiGateway::GatewayResponse
@@ -203,6 +239,8 @@ resources:
             AttributeType: S
         KeySchema:
           - AttributeName: todoId
+            KeyType: Range
+          - AttributeName: userId
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.TODOS_TABLE}
